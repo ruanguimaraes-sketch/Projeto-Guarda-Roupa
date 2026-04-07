@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Guarda-Roupa Inteligente</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: linear-gradient(135deg,#4CAF50,#2E7D32);
+    margin:0;
+}
+
+h1 {
+    text-align:center;
+    color:white;
+    padding:20px;
+}
+
+.container {
+    background:white;
+    max-width:420px;
+    margin:20px auto;
+    padding:20px;
+    border-radius:10px;
+}
+
+input, select, button {
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border-radius:8px;
+}
+
+button {
+    background:#4CAF50;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+button:hover { background:#388E3C; }
+
+.danger { background:red; }
+
+ul { list-style:none; padding:0; }
+
+li {
+    background:#eee;
+    margin:5px 0;
+    padding:8px;
+    border-radius:5px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>👕 Guarda-Roupa Inteligente</h1>
+
+<div class="container">
+
+<h2>Adicionar Roupa</h2>
+
+<select id="tipo" onchange="autoCategoria()">
+<option value="">Escolha</option>
+<option>Camisa</option>
+<option>Calça</option>
+<option>Short</option>
+<option>Sandália</option>
+<option>Tênis</option>
+<option>Boné</option>
+</select>
+
+<input id="categoria" placeholder="Categoria automática">
+<input id="cor" placeholder="Cor">
+
+<button onclick="adicionarRoupa()">Adicionar</button>
+
+<hr>
+
+<h2>Pontos ♻️</h2>
+<p><strong>Pontos:</strong> <span id="pontos">0</span></p>
+
+<button onclick="resetarPontos()" class="danger">🔄 Resetar Pontos</button>
+
+<h3>Missões</h3>
+<button onclick="ganharPontos(10)">♻️ Reutilizar roupa (+10)</button>
+<button onclick="ganharPontos(5)">🧠 Criar look (+5)</button>
+<button onclick="ganharPontos(15)">🚫 Não comprar (+15)</button>
+
+<hr>
+
+<h2>Buscar</h2>
+<input id="busca" onkeyup="buscar()" placeholder="Buscar...">
+
+<select id="filtro" onchange="filtrar()">
+<option value="">Todas</option>
+</select>
+
+<button onclick="limparTudo()" class="danger">🗑 Limpar Tudo</button>
+
+<h2>Roupas</h2>
+<ul id="lista"></ul>
+
+</div>
+
+<script>
+// ===== DADOS =====
+let roupas = JSON.parse(localStorage.getItem("roupas")) || [];
+let pontos = 0;
+
+// ===== CARREGAR =====
+function carregar() {
+    let salvo = localStorage.getItem("pontos");
+
+    if (salvo === null) {
+        pontos = 0;
+    } else {
+        pontos = Number(salvo);
+    }
+
+    atualizarTudo();
+}
+
+// ===== SALVAR =====
+function salvar() {
+    localStorage.setItem("roupas", JSON.stringify(roupas));
+}
+
+function salvarPontos() {
+    localStorage.setItem("pontos", pontos);
+}
+
+// ===== PONTOS =====
+function atualizarPontos() {
+    document.getElementById("pontos").innerText = pontos;
+}
+
+function ganharPontos(valor) {
+    pontos += valor;
+    salvarPontos();
+    atualizarPontos();
+}
+
+function resetarPontos() {
+    localStorage.removeItem("pontos");
+    pontos = 0;
+    atualizarPontos();
+    alert("Pontos resetados!");
+}
+
+// ===== ROUPAS =====
+function autoCategoria() {
+    let tipo = document.getElementById("tipo").value;
+
+    let mapa = {
+        "Camisa":"Parte de cima",
+        "Calça":"Parte de baixo",
+        "Short":"Parte de baixo",
+        "Sandália":"Calçado",
+        "Tênis":"Calçado",
+        "Boné":"Acessório"
+    };
+
+    document.getElementById("categoria").value = mapa[tipo] || "";
+}
+
+function adicionarRoupa() {
+    let tipo = document.getElementById("tipo").value;
+    let categoria = document.getElementById("categoria").value;
+    let cor = document.getElementById("cor").value;
+
+    if(!tipo || !categoria || !cor){
+        alert("Preencha tudo!");
+        return;
+    }
+
+    roupas.push({nome:tipo, categoria, cor});
+    salvar();
+    atualizarTudo();
+}
+
+function mostrarRoupas(lista) {
+    let ul = document.getElementById("lista");
+    ul.innerHTML="";
+
+    lista.forEach((r,i)=>{
+        ul.innerHTML += `
+        <li>
+        ${r.nome} (${r.cor})
+        <button onclick="remover(${i})">❌</button>
+        </li>`;
+    });
+}
+
+function remover(i){
+    roupas.splice(i,1);
+    salvar();
+    atualizarTudo();
+}
+
+function limparTudo(){
+    if(confirm("Apagar tudo?")){
+        roupas=[];
+        salvar();
+        atualizarTudo();
+    }
+}
+
+// ===== BUSCA =====
+function buscar(){
+    let t = document.getElementById("busca").value.toLowerCase();
+
+    let res = roupas.filter(r =>
+        r.nome.toLowerCase().includes(t) ||
+        r.categoria.toLowerCase().includes(t)
+    );
+
+    mostrarRoupas(res);
+}
+
+function filtrar(){
+    let cat = document.getElementById("filtro").value;
+
+    if(cat===""){
+        mostrarRoupas(roupas);
+        return;
+    }
+
+    let res = roupas.filter(r=>r.categoria===cat);
+    mostrarRoupas(res);
+}
+
+function atualizarFiltro(){
+    let select = document.getElementById("filtro");
+    let cats = [...new Set(roupas.map(r=>r.categoria))];
+
+    select.innerHTML=`<option value="">Todas</option>`;
+
+    cats.forEach(c=>{
+        select.innerHTML += `<option>${c}</option>`;
+    });
+}
+
+// ===== ATUALIZAR =====
+function atualizarTudo(){
+    mostrarRoupas(roupas);
+    atualizarFiltro();
+    atualizarPontos();
+}
+
+// ===== INICIAR =====
+carregar();
+</script>
+
+</body>
+</html>
